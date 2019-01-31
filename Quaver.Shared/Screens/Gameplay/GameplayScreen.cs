@@ -2,7 +2,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * Copyright (c) 2017-2018 Swan & The Quaver Team <support@quavergame.com>.
+ * Copyright (c) 2017-2019 Swan & The Quaver Team <support@quavergame.com>.
 */
 
 using System;
@@ -586,15 +586,7 @@ namespace Quaver.Shared.Screens.Gameplay
 
                 // Restart the map if the user has held it down for
                 if (RestartKeyHoldTime >= 200)
-                {
-                    SkinManager.Skin.SoundRetry.CreateChannel().Play();
-
-                    // Use ChangeScreen here to give instant feedback. Can't be threaded
-                    if (InReplayMode)
-                        QuaverScreenManager.ChangeScreen(new GameplayScreen(Map, MapHash, LocalScores, LoadedReplay));
-                    else
-                        QuaverScreenManager.ChangeScreen(new GameplayScreen(Map, MapHash, LocalScores));
-                }
+                    Retry();
 
                 return;
             }
@@ -614,6 +606,21 @@ namespace Quaver.Shared.Screens.Gameplay
         }
 
         /// <summary>
+        ///     Will restart the screen appropriately.
+        /// </summary>
+        public void Retry()
+        {
+            GameBase.Game.GlobalUserInterface.Cursor.Alpha = 0;
+            SkinManager.Skin.SoundRetry.CreateChannel().Play();
+
+            // Use ChangeScreen here to give instant feedback. Can't be threaded
+            if (InReplayMode)
+                QuaverScreenManager.ChangeScreen(new GameplayScreen(Map, MapHash, LocalScores, LoadedReplay));
+            else
+                QuaverScreenManager.ChangeScreen(new GameplayScreen(Map, MapHash, LocalScores));
+        }
+
+        /// <summary>
         ///     Skips the song to the next object if on a break.
         /// </summary>
         private void SkipToNextObject()
@@ -622,7 +629,7 @@ namespace Quaver.Shared.Screens.Gameplay
                 return;
 
             // Get the skip time of the next object.
-            var nextObject = Ruleset.HitObjectManager.NextHitObject.StartTime;
+            var nextObject = Ruleset.HitObjectManager.NextHitObject.Value.StartTime;
             var skipTime = nextObject - GameplayAudioTiming.StartDelay * ModHelper.GetRateFromMods(ModManager.Mods);
 
             try

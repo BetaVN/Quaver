@@ -2,7 +2,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * Copyright (c) 2017-2018 Swan & The Quaver Team <support@quavergame.com>.
+ * Copyright (c) 2017-2019 Swan & The Quaver Team <support@quavergame.com>.
 */
 
 using System;
@@ -137,11 +137,11 @@ namespace Quaver.Shared.Screens.Gameplay.Rulesets.Keys.HitObjects
         /// <inheritdoc />
         /// <summary>
         /// </summary>
-        public override HitObjectInfo NextHitObject
+        public override HitObjectInfo? NextHitObject
         {
             get
             {
-                HitObjectInfo nextObject = null;
+                HitObjectInfo? nextObject = null;
 
                 var earliestObjectTime = int.MaxValue;
 
@@ -185,25 +185,7 @@ namespace Quaver.Shared.Screens.Gameplay.Rulesets.Keys.HitObjects
                     isHoldingAnyNotes = true;
                 }
 
-                return !(nextObject.StartTime - CurrentAudioPosition < GameplayAudioTiming.StartDelay + 5000) && !isHoldingAnyNotes;
-            }
-        }
-
-        /// <summary>
-        ///     The offset from the edge of the screen of the hit position.
-        /// </summary>
-        public float HitPositionOffset
-        {
-            get
-            {
-                var playfield = (GameplayPlayfieldKeys) Ruleset.Playfield;
-                var skin = SkinManager.Skin.Keys[Ruleset.Mode];
-
-                if (GameplayRulesetKeys.IsDownscroll)
-                    return playfield.ReceptorPositionY + skin.HitPosOffsetY;
-
-                // Up Scroll
-                return playfield.ReceptorPositionY - skin.HitPosOffsetY;
+                return !(nextObject.Value.StartTime - CurrentAudioPosition < GameplayAudioTiming.StartDelay + 5000) && !isHoldingAnyNotes;
             }
         }
 
@@ -215,7 +197,6 @@ namespace Quaver.Shared.Screens.Gameplay.Rulesets.Keys.HitObjects
         public HitObjectManagerKeys(GameplayRulesetKeys ruleset, Qua map) : base(map)
         {
             Ruleset = ruleset;
-            GameplayHitObjectKeys.HitPositionOffset = HitPositionOffset;
 
             // Initialize SV
             UpdatePoolingPositions();
@@ -333,7 +314,7 @@ namespace Quaver.Shared.Screens.Gameplay.Rulesets.Keys.HitObjects
                     Ruleset.ScoreProcessor.Stats.Add(stat);
                     Ruleset.ScoreProcessor.CalculateScore(Judgement.Miss);
 
-                    var view = (GameplayScreenView) Ruleset.Screen.View;
+                    var view = (GameplayScreenView)Ruleset.Screen.View;
                     view.UpdateScoreAndAccuracyDisplays();
 
                     // Perform Playfield animations
@@ -341,7 +322,7 @@ namespace Quaver.Shared.Screens.Gameplay.Rulesets.Keys.HitObjects
                     playfield.Stage.ComboDisplay.MakeVisible();
                     playfield.Stage.JudgementHitBurst.PerformJudgementAnimation(Judgement.Miss);
 
-                    // If HitObject is an LN, kill it and count it as another miss because of the tail.
+                    // If ManiaHitObject is an LN, kill it and count it as another miss because of the tail.
                     // - missing an LN counts as two misses
                     if (hitObject.Info.IsLongNote)
                     {
@@ -521,7 +502,9 @@ namespace Quaver.Shared.Screens.Gameplay.Rulesets.Keys.HitObjects
         {
             // Change start time and LN size.
             gameplayHitObject.InitialTrackPosition = GetPositionFromTime(CurrentAudioPosition);
-            gameplayHitObject.Info.StartTime = (int)CurrentAudioPosition;
+            var temp = gameplayHitObject.Info;
+            temp.StartTime = (int)CurrentAudioPosition;
+            gameplayHitObject.Info = temp;
             gameplayHitObject.CurrentlyBeingHeld = false;
             gameplayHitObject.UpdateLongNoteSize(gameplayHitObject.InitialTrackPosition);
             gameplayHitObject.Kill();
