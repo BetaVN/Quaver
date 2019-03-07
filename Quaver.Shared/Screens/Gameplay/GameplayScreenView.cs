@@ -2,7 +2,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * Copyright (c) 2017-2018 Swan & The Quaver Team <support@quavergame.com>.
+ * Copyright (c) Swan & The Quaver Team <support@quavergame.com>.
 */
 
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ using Quaver.API.Helpers;
 using Quaver.API.Maps.Processors.Scoring;
 using Quaver.API.Maps.Processors.Scoring.Data;
 using Quaver.Shared.Assets;
+using Quaver.Shared.Audio;
 using Quaver.Shared.Config;
 using Quaver.Shared.Database.Maps;
 using Quaver.Shared.Graphics;
@@ -21,10 +22,12 @@ using Quaver.Shared.Graphics.Notifications;
 using Quaver.Shared.Helpers;
 using Quaver.Shared.Modifiers;
 using Quaver.Shared.Online;
+using Quaver.Shared.Screens.Editor;
 using Quaver.Shared.Screens.Gameplay.UI;
 using Quaver.Shared.Screens.Gameplay.UI.Counter;
 using Quaver.Shared.Screens.Gameplay.UI.Scoreboard;
 using Quaver.Shared.Screens.Result;
+using Quaver.Shared.Screens.Select;
 using Quaver.Shared.Skinning;
 using Steamworks;
 using Wobble;
@@ -105,6 +108,10 @@ namespace Quaver.Shared.Screens.Gameplay
         public PauseScreen PauseScreen { get; set; }
 
         /// <summary>
+        /// </summary>
+        private ComboAlert ComboAlert { get; set; }
+
+        /// <summary>
         ///     Determines if the transitioner is currently fading on play restart.
         /// </summary>
         public bool FadingOnRestartKeyPress { get; set; }
@@ -131,11 +138,6 @@ namespace Quaver.Shared.Screens.Gameplay
         private bool ResultsScreenLoadInitiated { get; set; }
 
         /// <summary>
-        ///     The results screen to be loaded in the future on play completion.
-        /// </summary>
-        private QuaverScreen FutureResultsScreen { get; set; }
-
-        /// <summary>
         ///     When the results screen has successfully loaded, we'll be considered clear
         ///     to exit and fade out the screen.
         /// </summary>
@@ -154,12 +156,18 @@ namespace Quaver.Shared.Screens.Gameplay
             CreateScoreDisplay();
             CreateAccuracyDisplay();
 
+            if (ConfigManager.DisplayComboAlerts.Value)
+                ComboAlert = new ComboAlert(Screen.Ruleset.ScoreProcessor) { Parent = Container };
+
             // Create judgement status display
-            JudgementCounter = new JudgementCounter(Screen) { Parent = Container };
+            if (ConfigManager.DisplayJudgementCounter.Value)
+                JudgementCounter = new JudgementCounter(Screen) { Parent = Container };
 
             CreateKeysPerSecondDisplay();
             CreateGradeDisplay();
-            CreateScoreboard();
+
+            if (!Screen.IsPlayTesting)
+                CreateScoreboard();
 
             SkipDisplay = new SkipDisplay(Screen, SkinManager.Skin.Skip) { Parent = Container };
 
@@ -240,8 +248,10 @@ namespace Quaver.Shared.Screens.Gameplay
             if (!ConfigManager.DisplaySongTimeProgress.Value)
                 return;
 
+            var skin = SkinManager.Skin.Keys[Screen.Map.Mode];
+
             ProgressBar = new SongTimeProgressBar(Screen, new Vector2(WindowManager.Width, 4), 0, Screen.Map.Length / ModHelper.GetRateFromMods(ModManager.Mods), 0,
-                Colors.MainAccentInactive, Colors.MainAccent)
+                skin.SongTimeProgressInactiveColor, skin.SongTimeProgressActiveColor)
             {
                 Parent = Container,
                 Alignment = Alignment.BotLeft
@@ -451,10 +461,29 @@ namespace Quaver.Shared.Screens.Gameplay
                 ScreenChangedToRedOnFailure = true;
             }
 
-            // Load the results screen asynchronously, so that we don't run through any freezes.
             if (!ResultsScreenLoadInitiated)
             {
-                Screen.Exit(() => new ResultScreen(Screen), 500);
+                if (Screen.IsPlayTesting)
+                {
+                    if (AudioEngine.Track.IsPlaying)
+                    {
+                        AudioEngine.Track.Pause();
+                        AudioEngine.Track.Seek(Screen.PlayTestAudioTime);
+                    }
+
+                    Screen.Exit(() => new EditorScreen(Screen.OriginalEditorMap));
+                    ResultsScreenLoadInitiated = true;
+                    return;
+                }
+
+                Screen.Exit(() =>
+                {
+                    if (Screen.HasQuit && ConfigManager.SkipResultsScreenAfterQuit.Value)
+                        return new SelectScreen();
+
+                    return new ResultScreen(Screen);
+                }, 500);
+
                 ResultsScreenLoadInitiated = true;
             }
 

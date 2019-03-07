@@ -1,16 +1,23 @@
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
- * Copyright (c) 2017-2018 Swan & The Quaver Team <support@quavergame.com>.
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright (c) Swan & The Quaver Team <support@quavergame.com>.
 */
 
+using System;
+using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using Quaver.API.Enums;
 using Quaver.Shared.Assets;
+using Quaver.Shared.Config;
+using Quaver.Shared.Database.Maps;
 using Quaver.Shared.Graphics;
-using Wobble;
+using Quaver.Shared.Graphics.Backgrounds;
+using Quaver.Shared.Screens.Editor.UI.Rulesets.Keys;
 using Wobble.Graphics;
+using Wobble.Graphics.Animations;
 using Wobble.Graphics.Primitives;
 using Wobble.Graphics.Sprites;
 using Wobble.Graphics.UI.Buttons;
@@ -19,11 +26,11 @@ using Wobble.Input;
 using Wobble.Logging;
 using Wobble.Window;
 
-namespace Quaver.Shared.Screens.Menu.UI.Dialogs
+namespace Quaver.Shared.Screens.Editor.UI.Dialogs.Metadata
 {
-    public class QuitDialog : DialogScreen
+    public class EditorMetadataConfirmationDialog : DialogScreen
     {
-        /// <summary>
+         /// <summary>
         ///     The box where all the content is contained.
         /// </summary>
         public Sprite ContainingBox { get; set; }
@@ -34,7 +41,7 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
         public Line TopLine { get; set; }
 
         /// <summary>
-        ///     Text that asks the user if they're sure they want to quit.
+        ///     Text that asks the user if they're sure.
         /// </summary>
         public SpriteText AreYouSure { get; set; }
 
@@ -44,21 +51,34 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
         public Line DividerLine { get; set; }
 
         /// <summary>
-        ///     The button to exit the game.
+        ///     The button to confirm
         /// </summary>
-        public TextButton QuitButton { get; set; }
+        public TextButton SureButton { get; set; }
 
         /// <summary>
         ///     The button to cancel the dialog.
         /// </summary>
         public TextButton CancelButton { get; set; }
 
+        /// <summary>
+        /// </summary>
+        private EditorScreen Screen { get; }
+
+        /// <summary>
+        ///     The background file to use.
+        /// </summary>
+        private EditorMetadataChanger Changer { get; }
+
         /// <inheritdoc />
         /// <summary>
         /// </summary>
-        public QuitDialog() : base(0.75f)
+        public EditorMetadataConfirmationDialog(EditorScreen screen, EditorMetadataChanger changer) : base(0)
         {
-            Logger.Debug($"Opened QuitDialog", LogType.Runtime);
+            Screen = screen;
+            Changer = changer;
+            Screen.InBackgroundConfirmationDialog = true;
+
+            Animations.Add(new Animation(AnimationProperty.Alpha, Easing.Linear, 0, 0.75f, 100));
             CreateContent();
         }
 
@@ -71,7 +91,7 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
             CreateTopLine();
             CreateAreYouSureText();
             CreateDividerLine();
-            CreateQuitButton();
+            CreateSureButton();
             CreateCancelButton();
         }
 
@@ -82,10 +102,10 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
         {
             var dt = gameTime.ElapsedGameTime.TotalMilliseconds;
 
-            QuitButton.Border.FadeToColor(QuitButton.IsHovered ? Color.White : Color.Crimson, dt, 60);
-            QuitButton.Text.FadeToColor(QuitButton.IsHovered ? Color.White : Color.Crimson, dt, 60);
-            CancelButton.Border.FadeToColor(CancelButton.IsHovered ? Color.White : Colors.MainAccent, dt, 60);
-            CancelButton.Text.FadeToColor(CancelButton.IsHovered ? Color.White : Colors.MainAccent, dt, 60);
+            SureButton.Border.FadeToColor(SureButton.IsHovered ? Color.White : Color.LimeGreen, dt, 60);
+            SureButton.Text.FadeToColor(SureButton.IsHovered ? Color.White : Color.LimeGreen, dt, 60);
+            CancelButton.Border.FadeToColor(CancelButton.IsHovered ? Color.White : Color.Crimson, dt, 60);
+            CancelButton.Text.FadeToColor(CancelButton.IsHovered ? Color.White : Color.Crimson, dt, 60);
 
             base.Update(gameTime);
         }
@@ -97,15 +117,15 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
         public override void HandleInput(GameTime gameTime)
         {
             if (KeyboardManager.IsUniqueKeyPress(Keys.Escape))
-                Dismiss("KeyboardManager (ESC Button)");
+                Dismiss();
         }
 
         /// <summary>
         ///     Dismisses the dialog.
         /// </summary>
-        private void Dismiss(string via = "")
+        private void Dismiss()
         {
-            Logger.Debug($"Dismissed QuitDialog - {via}", LogType.Runtime);
+            Screen.InBackgroundConfirmationDialog = false;
             DialogManager.Dismiss(this);
         }
 
@@ -133,11 +153,10 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
         };
 
         /// <summary>
-        ///     Creates the text that asks if the user is sure they want to quit.
         /// </summary>
         private void CreateAreYouSureText()
         {
-            AreYouSure = new SpriteText(Fonts.Exo2Medium, "Are you sure you want to quit the game?", 24)
+            AreYouSure = new SpriteText(Fonts.Exo2Medium, "Would you like to save your changes?", 24)
             {
                 Parent = ContainingBox,
                 Alignment = Alignment.TopCenter,
@@ -170,15 +189,32 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
         /// <summary>
         ///     Creates the button to quit the game.
         /// </summary>
-        private void CreateQuitButton()
+        private void CreateSureButton()
         {
-            QuitButton = new TextButton(UserInterface.BlankBox, Fonts.Exo2Medium,
-                "Quit", 14, (o, e) =>
+            SureButton = new TextButton(UserInterface.BlankBox, Fonts.Exo2Medium,
+                "Sure", 14, (o, e) =>
                 {
-                    Logger.Debug($"Exiting game via QuitDialog", LogType.Runtime);
+                    var modeBeforeSave = Screen.WorkingMap.Mode;
+                    Changer.Container.Items.ForEach(x => x.SaveValue(x.GetValue()));
 
-                    var game = GameBase.Game as QuaverGame;
-                    game?.Exit();
+                    // Need to handle the game mode change.
+                    if (modeBeforeSave != Screen.WorkingMap.Mode)
+                    {
+                        Logger.Important($"Game mode changed from: {modeBeforeSave} to {Screen.WorkingMap.Mode}", LogType.Runtime);
+
+                        // Mode changed from 7k to 4k, so get rid of all the 4k HitObjects
+                        if (modeBeforeSave == GameMode.Keys7)
+                            Screen.WorkingMap.HitObjects.RemoveAll(x => x.Lane > 4);
+
+                        // Need to destroy/remake the scroll container.
+                        var ruleset = Screen.Ruleset as EditorRulesetKeys;
+                        ruleset?.ScrollContainer.Destroy();
+                        ruleset?.CreateScrollContainer();
+                    }
+
+                    Screen.Save();
+                    Dismiss();
+                    Changer.Dialog.Close();
                 })
             {
                 Parent = AreYouSure,
@@ -188,11 +224,11 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
                 Tint = Color.Transparent,
                 Text =
                 {
-                    Tint = Color.Crimson
+                    Tint = Color.LimeGreen
                 }
             };
 
-            QuitButton.AddBorder(Color.Crimson, 2);
+            SureButton.AddBorder(Color.LimeGreen, 2);
         }
 
         /// <summary>
@@ -201,21 +237,21 @@ namespace Quaver.Shared.Screens.Menu.UI.Dialogs
         private void CreateCancelButton()
         {
             CancelButton = new TextButton(UserInterface.BlankBox,
-                Fonts.Exo2Medium, "Cancel", 14, (o, e) => Dismiss("Cancel Button"))
+                Fonts.Exo2Medium, "Cancel", 14, (o, e) => Dismiss())
             {
                 Parent = AreYouSure,
                 Y = DividerLine.Y + DividerLine.Height + 25,
                 UsePreviousSpriteBatchOptions = true,
-                X = QuitButton.X + QuitButton.Width + 25,
+                X = SureButton.X + SureButton.Width + 25,
                 Size = new ScalableVector2(200, 40),
                 Tint = Color.Transparent,
                 Text =
                 {
-                    Tint = Colors.MainAccent
+                    Tint = Color.Crimson
                 }
             };
 
-            CancelButton.AddBorder(Colors.MainAccent, 2);
+            CancelButton.AddBorder(Color.Crimson, 2);
         }
     }
 }

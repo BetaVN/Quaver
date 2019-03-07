@@ -2,7 +2,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * Copyright (c) 2017-2018 Swan & The Quaver Team <support@quavergame.com>.
+ * Copyright (c) Swan & The Quaver Team <support@quavergame.com>.
 */
 
 using System;
@@ -12,6 +12,7 @@ using Quaver.Server.Client;
 using Quaver.Shared.Assets;
 using Quaver.Shared.Audio;
 using Quaver.Shared.Database.Maps;
+using Quaver.Shared.Graphics.Dialogs;
 using Quaver.Shared.Graphics.Notifications;
 using Quaver.Shared.Graphics.Online.Playercard;
 using Quaver.Shared.Helpers;
@@ -20,7 +21,6 @@ using Quaver.Shared.Screens.Download;
 using Quaver.Shared.Screens.Editor;
 using Quaver.Shared.Screens.Importing;
 using Quaver.Shared.Screens.Menu.UI.Buttons;
-using Quaver.Shared.Screens.Menu.UI.Dialogs;
 using Quaver.Shared.Screens.Menu.UI.Jukebox;
 using Quaver.Shared.Screens.Menu.UI.Navigation;
 using Quaver.Shared.Screens.Menu.UI.Navigation.User;
@@ -37,6 +37,7 @@ using Wobble.Graphics.Sprites;
 using Wobble.Graphics.UI;
 using Wobble.Graphics.UI.Buttons;
 using Wobble.Graphics.UI.Dialogs;
+using Wobble.Logging;
 using Wobble.Screens;
 using Wobble.Window;
 
@@ -217,7 +218,14 @@ namespace Quaver.Shared.Screens.Menu
             const int targetY = -5;
             const int animationTime = 1100;
 
-            PowerButton = new ToolButton(FontAwesome.Get(FontAwesomeIcon.fa_power_button_off), (o, e) => DialogManager.Show(new QuitDialog()))
+            PowerButton = new ToolButton(FontAwesome.Get(FontAwesomeIcon.fa_power_button_off), (o, e) =>
+            {
+                DialogManager.Show(new ConfirmCancelDialog("Are you sure you want to exit Quaver?",(sender, args) =>
+                {
+                    var game = GameBase.Game as QuaverGame;
+                    game?.Exit();
+                }));
+            })
             {
                 Alignment = Alignment.BotRight,
             };
@@ -415,10 +423,11 @@ namespace Quaver.Shared.Screens.Menu
 
                 try
                 {
-                    return new EditorScreen(MapManager.Selected.Value.LoadQua());
+                    return new EditorScreen(MapManager.Selected.Value.LoadQua(false));
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Logger.Error(ex, LogType.Runtime);
                     NotificationManager.Show(NotificationLevel.Error, "Unable to read map file!");
                     return new MenuScreen();
                 }

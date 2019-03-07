@@ -1,8 +1,8 @@
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
- * Copyright (c) 2017-2018 Swan & The Quaver Team <support@quavergame.com>.
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright (c) Swan & The Quaver Team <support@quavergame.com>.
 */
 
 using System;
@@ -136,7 +136,7 @@ namespace Quaver.Shared.Screens.Menu.UI.Panels
         ///     Creates the text that displays the title of the panel.
         /// </summary>
         /// <param name="title"></param>
-        private void CreateTitleText(string title) => Title = new SpriteText(Fonts.Exo2BoldItalic, title.ToUpper(), 22, true, (int)Width)
+        private void CreateTitleText(string title) => Title = new SpriteText(Fonts.Exo2BoldItalic, title.ToUpper(), 22, (int)Width)
         {
             Parent = HeadingContainer,
             Alignment = Alignment.TopLeft,
@@ -150,7 +150,7 @@ namespace Quaver.Shared.Screens.Menu.UI.Panels
         /// </summary>
         /// <param name="description"></param>
         private void CreateDescriptionText(string description) => Description = new SpriteText(Fonts.Exo2BoldItalic,
-            description, 12, true, (int) Width - 15)
+            description, 12, (int) Width - 15)
         {
             Parent = HeadingContainer,
             Alignment = Alignment.TopLeft,

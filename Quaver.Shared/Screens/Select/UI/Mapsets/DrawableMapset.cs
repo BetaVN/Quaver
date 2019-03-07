@@ -2,7 +2,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * Copyright (c) 2017-2018 Swan & The Quaver Team <support@quavergame.com>.
+ * Copyright (c) Swan & The Quaver Team <support@quavergame.com>.
 */
 
 using System;
@@ -72,14 +72,14 @@ namespace Quaver.Shared.Screens.Select.UI.Mapsets
                 Position = new ScalableVector2(15, 12)
             };
 
-            Artist = new SpriteText(Fonts.Exo2SemiBold, " ", 12, false)
+            Artist = new SpriteText(Fonts.Exo2SemiBold, " ", 12)
             {
                 Parent = this,
                 Alignment = Alignment.TopLeft,
                 Position = new ScalableVector2(Title.X, Title.Y + Title.Height + 3)
             };
 
-            Creator = new SpriteText(Fonts.Exo2Medium, " ", 10, false)
+            Creator = new SpriteText(Fonts.Exo2Medium, " ", 10)
             {
                 Parent = this,
                 Alignment = Alignment.TopRight,
